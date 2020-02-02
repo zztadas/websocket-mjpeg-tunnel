@@ -76,12 +76,16 @@ wss.on('connection', (ws: ExtWebSocket, req: http.IncomingMessage) => {
         ws.isAlive = true;
         let res = cameraHttpRes.get(cameraId);
         if (res && !res.writableEnded) {
-            res.write(`--${BOUNDARY}\r\n`);
-            res.write('Content-Type: image/jpeg\r\n');
-            res.write(`Content-Length: ${message.length}\r\n`);
-            res.write('\r\n');
-            res.write(message, 'binary');
-            res.write('\r\n');
+            try {
+                res.write(`--${BOUNDARY}\r\n`);
+                res.write('Content-Type: image/jpeg\r\n');
+                res.write(`Content-Length: ${message.length}\r\n`);
+                res.write('\r\n');
+                res.write(message, 'binary');
+                res.write('\r\n');
+            } catch (e) {
+                console.log('Error while writing image data', e);
+            }
         } else {
             sendStopToCamera(cameraId);
         }

@@ -86,7 +86,6 @@ wss.on('connection', (ws: ExtWebSocket, req: http.IncomingMessage) => {
             sendStopToCamera(cameraId);
         }
 
-        ws.send('OK');
     });
 
     ws.on('close', (event: WebSocket.CloseEvent) => {

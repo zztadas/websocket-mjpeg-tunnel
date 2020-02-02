@@ -18,7 +18,9 @@ function sendStopToCamera(cameraId: string) {
     let webSocket = cameraSockets.get(cameraId);
     if (webSocket) {
         webSocket.send('STOP', (err) => {
-            console.log('Error while sending END to camera socket', err);
+            if (err) {
+                console.log('Error while sending END to camera socket', err);
+            }
         });
     }
 }

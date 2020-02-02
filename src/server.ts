@@ -98,8 +98,12 @@ wss.on('connection', (ws: ExtWebSocket, req: http.IncomingMessage) => {
         let res = cameraHttpRes.get(cameraId);
         if (res) {
             console.log('Response ended');
-            res.end();
-            cameraHttpRes.delete(cameraId);
+            try {
+                cameraHttpRes.delete(cameraId);
+                res.end();
+            } catch (e) {
+                console.log("Error on close", e);
+            }
         }
     });
 
@@ -110,7 +114,10 @@ wss.on('connection', (ws: ExtWebSocket, req: http.IncomingMessage) => {
 setInterval(() => {
     wss.clients.forEach((ws: WebSocket) => {
         const extWs = ws as ExtWebSocket;
-        if (!extWs.isAlive) return ws.terminate();
+        if (!extWs.isAlive) {
+            console.log('Connection not alive, terminating');
+            return ws.terminate();
+        }
 
         extWs.isAlive = false;
         ws.ping(null, false);

@@ -45,6 +45,11 @@ app.get("/camera/:id", function (req, res, next) {
         res.on('close', () => {
             sendStopToCamera(cameraId);
             res.end();
+        });
+
+        res.on('error', (err) => {
+            sendStopToCamera(cameraId);
+            console.log('Response error', err);
         })
 
     } else {

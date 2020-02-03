@@ -43,6 +43,7 @@ app.get("/camera/:id", function (req, res, next) {
         });
 
         res.on('close', () => {
+            console.log('Response close');
             sendStopToCamera(cameraId);
             res.end();
         });
@@ -50,7 +51,7 @@ app.get("/camera/:id", function (req, res, next) {
         res.on('error', (err) => {
             sendStopToCamera(cameraId);
             console.log('Response error', err);
-        })
+        });
 
     } else {
         const message = `No connected camera with id '${cameraId}' stream found `;
@@ -85,16 +86,12 @@ wss.on('connection', (ws: ExtWebSocket, req: http.IncomingMessage) => {
         ws.isAlive = true;
         let res = cameraHttpRes.get(cameraId);
         if (res && !res.writableEnded) {
-            try {
-                res.write(`--${BOUNDARY}\r\n`);
-                res.write('Content-Type: image/jpeg\r\n');
-                res.write(`Content-Length: ${message.length}\r\n`);
-                res.write('\r\n');
-                res.write(message, 'binary');
-                res.write('\r\n');
-            } catch (e) {
-                console.log('Error while writing image data', e);
-            }
+            res.write(`--${BOUNDARY}\r\n`);
+            res.write('Content-Type: image/jpeg\r\n');
+            res.write(`Content-Length: ${message.length}\r\n`);
+            res.write('\r\n');
+            res.write(message, 'binary');
+            res.write('\r\n');
         } else {
             sendStopToCamera(cameraId);
         }
@@ -116,7 +113,7 @@ wss.on('connection', (ws: ExtWebSocket, req: http.IncomingMessage) => {
         }
     });
 
-    ws.on('error', (socket:WebSocket, err: Error) => {
+    ws.on('error', (socket: WebSocket, err: Error) => {
         console.log('Error on socket', err);
     });
 

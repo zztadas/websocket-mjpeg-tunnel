@@ -46,10 +46,10 @@ app.get("/camera/:id", function (req, res, next) {
             console.log('Response close');
             sendStopToCamera(cameraId);
             res.end();
+            cameraHttpRes.delete(cameraId);
         });
 
         res.on('error', (err) => {
-            sendStopToCamera(cameraId);
             console.log('Response error', err);
         });
 
@@ -91,11 +91,10 @@ wss.on('connection', (ws: ExtWebSocket, req: http.IncomingMessage) => {
             res.write(`Content-Length: ${message.length}\r\n`);
             res.write('\r\n');
             res.write(message, 'binary');
-            res.write('\r\n');
+                res.write('\r\n');
         } else {
             sendStopToCamera(cameraId);
         }
-
     });
 
     ws.on('close', (event: WebSocket.CloseEvent) => {

@@ -111,6 +111,10 @@ wss.on('connection', (ws: ExtWebSocket, req: http.IncomingMessage) => {
         }
     });
 
+    ws.on('error', (socket:WebSocket, err: Error) => {
+        console.log('Error on socket', err);
+    });
+
     //send immediatly a feedback to the incoming connection
     ws.send('OK');
 });

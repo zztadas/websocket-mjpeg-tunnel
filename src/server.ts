@@ -60,6 +60,10 @@ const server = http.createServer(app);
 //initialize the WebSocket server instance
 const wss = new WebSocket.Server({server});
 
+wss.on('error', (serv: any, err: Error) => {
+    console.log('WSS error', err);
+});
+
 wss.on('connection', (ws: ExtWebSocket, req: http.IncomingMessage) => {
     ws.isAlive = true;
 

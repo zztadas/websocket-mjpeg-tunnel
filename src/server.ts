@@ -14,17 +14,6 @@ const cameraSockets: Map<string, ExtWebSocket> = new Map<string, ExtWebSocket>()
 const cameraHttpRes: Map<String, Response> = new Map<String, Response>();
 const BOUNDARY = 'MYBOUNDARY';
 
-function sendStopToCamera(cameraId: string) {
-    let webSocket = cameraSockets.get(cameraId);
-    if (webSocket) {
-        webSocket.send('STOP', (err) => {
-            if (err) {
-                console.log('Error while sending END to camera socket', err);
-            }
-        });
-    }
-}
-
 app.get("/camera/:id", function (req, res, next) {
     const cameraId = req.params['id'];
     console.log(`Received request to get stream from camera: ${cameraId}`);
@@ -32,7 +21,7 @@ app.get("/camera/:id", function (req, res, next) {
     if (webSocket) {
         console.log('Camera found sending START message');
         cameraHttpRes.set(cameraId, res);
-        webSocket.send("START", next);
+    //    webSocket.send("START", next);
         res.writeHead(200, {
             'Cache-Control': 'no-cache, no-store, max-age=0, must-revalidate',
             'Connection': 'keep-alive',
@@ -44,7 +33,6 @@ app.get("/camera/:id", function (req, res, next) {
 
         res.on('close', () => {
             console.log('Response close');
-            sendStopToCamera(cameraId);
             res.end();
             cameraHttpRes.delete(cameraId);
         });
@@ -70,16 +58,9 @@ wss.on('error', (serv: any, err: Error) => {
     console.log('WSS error', err);
 });
 
-wss.on('connection', (ws: ExtWebSocket, req: http.IncomingMessage) => {
-    ws.isAlive = true;
-
-    ws.on('pong', () => {
-        ws.isAlive = true;
-    });
-
-    const cameraId = req.url ? req.url.substr(1) : 'undef';
+function handleStreamWs(cameraId: string, ws: ExtWebSocket) {
     cameraSockets.set(cameraId, ws);
-    console.log(`Camera with id: '${cameraId}' connected`);
+    console.log(`Camera stream with id: '${cameraId}' connected`);
 
     //connection is up, let's add a simple simple event
     ws.on('message', (message: Buffer) => {
@@ -91,14 +72,12 @@ wss.on('connection', (ws: ExtWebSocket, req: http.IncomingMessage) => {
             res.write(`Content-Length: ${message.length}\r\n`);
             res.write('\r\n');
             res.write(message, 'binary');
-                res.write('\r\n');
-        } else {
-            sendStopToCamera(cameraId);
+            res.write('\r\n');
         }
     });
 
     ws.on('close', (event: WebSocket.CloseEvent) => {
-        console.log('Camera socket closed', cameraId);
+        console.log('Camera stream socket closed', cameraId);
         cameraSockets.delete(cameraId);
         let res = cameraHttpRes.get(cameraId);
         if (res) {
@@ -118,6 +97,48 @@ wss.on('connection', (ws: ExtWebSocket, req: http.IncomingMessage) => {
 
     //send immediatly a feedback to the incoming connection
     ws.send('OK');
+}
+
+function handleCommandWs(cameraId: string, ws: ExtWebSocket) {
+    cameraSockets.set(cameraId, ws);
+    console.log(`Camera with id: '${cameraId}' connected`);
+
+    //connection is up, let's add a simple simple event
+    ws.on('message', (message: string) => {
+        console.log('Message from command queue received', message);
+    });
+
+    ws.on('close', (event: WebSocket.CloseEvent) => {
+        console.log('Command socket closed', cameraId);
+    });
+
+    ws.on('error', (socket: WebSocket, err: Error) => {
+        console.log('Error on command socket', err);
+    });
+
+    //send immediatly a feedback to the incoming connection
+    ws.send('OK');
+}
+
+
+wss.on('connection', (ws: ExtWebSocket, req: http.IncomingMessage) => {
+    ws.isAlive = true;
+
+    ws.on('pong', () => {
+        console.log('Received pong');
+        ws.isAlive = true;
+    });
+
+    console.log('Received connection req with url', req.url);
+    let urlPaths = req.url ? req.url.substr(1).split('/') : ['undef', 'undef'];
+    const cameraId = urlPaths[0];
+    const queueId = urlPaths[1];
+
+    if (queueId === 'stream') {
+        handleStreamWs(cameraId, ws);
+    } else if (queueId === 'command') {
+        handleCommandWs(cameraId, ws);
+    }
 });
 
 setInterval(() => {
